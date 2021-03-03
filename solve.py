@@ -6,6 +6,9 @@ import pandas as pd
 from scipy.linalg import null_space
 # take in chem eqn, solve
 
+print("DO NOT ACCIDENTALLY TYPE '0' (zero) FOR OXYGEN INSTEAD OF 'O' (oh), which should be used! Also note that a current limitation is that polyatomic 'sub-compounds' such as 'Ca3(PO4)2' will not be properly parsed, so you should instead write it as 'Ca3P2O8'\n")
+
+
 def tokenToDict(s, start = {}):
 	a =  re.compile('[A-Z][a-z]?(\d|)*') # match a single element-number pair
 	pairs = []
@@ -78,9 +81,9 @@ M = np.concatenate([ML, -MR], axis = 1)
 
 ns = null_space(M)
 ns = ns/np.min(ns)
-coeficients = np.rint(ns) # round to nearest int # this was causing rounding errors: .astype(int) # make sure they're the same
+coeficients = np.rint(ns).astype(int) # round to nearest int # this was causing rounding errors: .astype(int) # make sure they're the same
 
-print("Raw null space solution (make sure it matches stoichiometric coeficients for a suitable solution): ", ns)
+#print("Raw null space solution (make sure it matches stoichiometric coeficients for a suitable solution): ", ns)
 print("Stoichiometric coeficients: ", list(zip( [el[0] for el in coeficients] , left+right) ) )
 
 
