@@ -8,6 +8,14 @@ from scipy.linalg import null_space
 
 print("DO NOT ACCIDENTALLY TYPE '0' (zero) FOR OXYGEN INSTEAD OF 'O' (oh), which should be used! Also note that a current limitation is that polyatomic 'sub-compounds' such as 'Ca3(PO4)2' will not be properly parsed, so you should instead write it as 'Ca3P2O8'\n")
 
+def get_gcd(vec):
+        vec = np.sort(vec)
+        maxi = np.max(vec)
+        while len(vec) > 1 and vec[-1]>0:
+                maxi = vec[-1]
+                vec = vec - vec[0]
+                vec = vec[1:]
+        return maxi
 
 def tokenToDict(s, start = {}):
 	a =  re.compile('[A-Z][a-z]?(\d|)*') # match a single element-number pair
@@ -39,33 +47,32 @@ def tokenToDict(s, start = {}):
 		
 
 
-try:
-	args = sys.argv[1:]
+args = sys.argv[1:]
 
-	left = args[:args.index('=')] # separate inputs and outputs
-	right = args[args.index('=')+1 :]
-	"""
-	Plan:
-	1. Get all element symbols
-	2. Get mols of each element on left and right
-	3. Figure out system to get equal number of each (maybe just least common multiple??
-	4. Reduce by common factor afterwards
-	"""
-	# remove + signs
-	left = [s for s in left if s!='+']
-	right = [s for s in right if s!='+']
-	#isCapitalAlpha = lambda x: ord(x) >= 65 and ord(x) <= 90 # is this a capital letter?
-	ldicts, rdicts = [ tokenToDict(s) for s in left ] , [tokenToDict(s) for s in right]
-	ldf, rdf = pd.DataFrame(ldicts).fillna(0.).T , pd.DataFrame(rdicts).fillna(0.).T
-	rdf = rdf.loc[ldf.index.tolist(),:]
-	# transpose so that each row corresponds to 1 element, convert to numpy
-	ML , MR = ldf.values.astype(float) , rdf.values.astype(float)
+left = args[:args.index('=')] # separate inputs and outputs
+right = args[args.index('=')+1 :]
+"""
+Plan:
+1. Get all element symbols
+2. Get mols of each element on left and right
+3. Figure out system to get equal number of each (maybe just least common multiple??
+4. Reduce by common factor afterwards
+"""
+# remove + signs
+left = [s for s in left if s!='+']
+right = [s for s in right if s!='+']
+#isCapitalAlpha = lambda x: ord(x) >= 65 and ord(x) <= 90 # is this a capital letter?
+ldicts, rdicts = [ tokenToDict(s) for s in left ] , [tokenToDict(s) for s in right]
 
-	#elements = [c for c in "".join(left) if isCapitalAlpha(c) ]
-	#elements = set(elements)
-	
-except:
-	print(sys.argv)
+
+ldf, rdf = pd.DataFrame(ldicts).fillna(0.).T , pd.DataFrame(rdicts).fillna(0.).T
+rdf = rdf.loc[ldf.index.tolist(),:] # rdf.reindex(index=ldf.index)
+# transpose so that each row corresponds to 1 element, convert to numpy
+ML , MR = ldf.values.astype(float) , rdf.values.astype(float)
+
+#elements = [c for c in "".join(left) if isCapitalAlpha(c) ]
+#elements = set(elements)
+
 
 # matrix: nelements x n_reactants
 # examples for testing:
@@ -78,12 +85,15 @@ except:
 # This is the real linear system that we need to solve. We can use scipy nullspace solution for this
 
 M = np.concatenate([ML, -MR], axis = 1)
-
 ns = null_space(M)
+ns = ns[:,0]
+ns = ns * np.sign(ns)
 ns = ns/np.min(ns)
-coeficients = np.rint(ns).astype(int) # round to nearest int # this was causing rounding errors: .astype(int) # make sure they're the same
+#gcd = get_gcd(ns)
+#ns = ns/gcd
+coeficients = ns # np.rint(ns).astype(int) # round to nearest int # this was causing rounding errors: .astype(int) # make sure they're the same
 
 #print("Raw null space solution (make sure it matches stoichiometric coeficients for a suitable solution): ", ns)
-print("Stoichiometric coeficients: ", list(zip( [el[0] for el in coeficients] , left+right) ) )
+print("Stoichiometric coeficients: ", list(zip( coeficients , left+right) ) )
 
 
